@@ -1,0 +1,184 @@
+---
+title: 'How to lie with Statistics: Polish presidential election 2025'
+author:
+- name: Tomasz Przechlewski
+  email: "t.plata-przechlewski@psw.kwidzyn.edu.pl"
+  affiliation: Powiślańska Szkoła Wyższa (Kwidzyn/Poland)
+date: "27/6/2025"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("knitr")
+
+```
+
+## Introduction
+
+An explanation of the entirely undeservedly high-profile analysis by
+Dr. Eng. Kontek, which purported to scientifically prove mass fraud
+committed during the 2025 presidential election in Poland. For reasons
+unknown, Mr. Kontek was so convincing that the Prosecutor General,
+Mr. Bodnar, took his claims with full seriousness:
+
+*The election protests filed by Krzysztof Kontek and Joanna Staniszkis
+were forwarded by the Supreme Court to the Prosecutor General on June
+23, 2025, for review and response, with a two-day deadline set for
+submitting a position, i.e., by the end of June 25, 2025, in
+accordance with the rules for calculating deadlines set out in the
+Code of Civil Procedure*.
+
+*The protest authors attached materials indicating possible
+irregularities in the vote-counting process. Their allegations were
+based on a scientifically verifiable method, which led the Prosecutor
+General to conclude that there was a high probability of actual
+irregularities in the work of the indicated electoral commissions*.
+
+In this short text, we will explain why Mr. Bodnar has embarrassed
+himself and the offices he holds.
+
+## Kontek’s Method
+
+Conceptually, the method is very simple:
+
+1. Kontek assumes that within small geographical areas, voting
+preferences are similar (scientifically homogeneous), which means that
+support for candidates should be roughly the same across all precincts
+in each area.  He identifies 2,200 such areas. On average, each area
+contains about 15 precincts and 10,000 voters who cast their ballots
+(20 million / 2,200).
+
+2. For each area, he calculates the median and the variability of
+support for Karol Nawrocki.  Variability here means how much the
+results differ between precincts. To measure this variability, he uses
+something called the median absolute deviation (MAD).
+
+3. He then calculates the following measure:
+
+$$k = \frac{x - me}{mad}$$
+
+where $x$ is the support for KN, $me$ is the median support,
+and $mad$ is the measure of variability known as MAD.
+The formula may look intimidating, but if $(x - me)$ is the
+percentage difference between the support in a precinct
+and the median for a given group,
+then dividing it by $mad$ rescales the result from a percentage
+into a multiple of MAD.
+So instead of a difference of, say, 4.34%, the result
+is 2.3 — meaning the deviation from the median is 2.3 MADs.
+
+He then arbitrarily chooses a threshold value he considers acceptable.
+Values with an absolute magnitude greater than 3 are treated as
+anomalies.  Kontek uses either $k = 2$ or $k = 3$ as his "acceptable"
+thresholds.
+
+Out of around 32,000 precinct-level election commissions, he thus
+identified 1,400 anomalies using $k = 3$, or 5,000 anomalies using
+$k = 2$
+
+## Why is this analysis flawed?
+
+Item (assumption) 1 — that small geographical areas must exhibit the same
+level of support — is pulled out of thin air. He simply assumes it,
+but there’s no reason it must be true. His entire “model” is based on
+this, and **any model is only as credible
+as the assumptions it's built on**.
+
+It’s worth noting that you don’t need any knowledge of statistics to
+recognize that his work is worthless garbage — just plain common sense
+is enough. And this is what Justice Minister Bodnar took to the
+Supreme Court? Honestly, it’s embarrassing.
+
+Items 2--4 are just irrelevant math. Of course his method produces
+“anomalies” — it has to. But whether these are signs of fraud is a
+completely different question. Kontek simply used an old trick:
+mathematically proving something, then pretending that this something
+has to do with something else, despite never actually demonstrating
+any relationship between the two.
+
+## Example
+
+I had not time to recreate the exact grouping of precincts the way
+Kontek did, but the grouping itself shouldn’t matter.
+Which specific precincts form a group is irrelevant, as long as they are
+geographically adjacent and there are around 15 of them (otherwise,
+the whole method is fundamentally flawed).
+
+So, for example, the municipality of Sopot has 25 voting
+precincts. (Kontek grouped by 15, but the more precincts in a group,
+the harder it is to detect “anomalies” — so my example is more than
+valid. The more precincts, the more difficult it is to find
+“anomalies”!)
+
+```{r, echo=FALSE}
+p25_r2 <- read.csv("protokoly_po_obwodach_w_drugiej_turze_utf8.csv",
+                   sep = ';', dec='.',
+                   colClasses = c('Teryt.Gminy'= 'character' ),
+                   header=TRUE,
+                   ##skip=1,
+                   na.string="NA" ) |>
+  select( nrk=Nr.komisji,
+          gmina=Gmina, 
+          teryt=Teryt.Gminy, 
+          siedziba=Siedziba, 
+          lgw=Liczba.głosów.ważnych.oddanych.łącznie.na.obu.kandydatów..z.kart.ważnych.,
+          nawrocki=NAWROCKI.Karol.Tadeusz,
+          trzaskowski=TRZASKOWSKI.Rafał.Kazimierz ) |>
+  ## Poprawiamy teryt
+  mutate(teryt = ifelse( nchar(teryt) == 5, sprintf ("0%s", teryt), teryt)) |>
+  mutate ( rr =  nawrocki + trzaskowski,
+           nawrocki.p = nawrocki/rr *100,
+           trzaskowski.p = trzaskowski/rr *100  ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, teryt, siedziba,
+         nawrocki2=nawrocki, trzaskowski2=trzaskowski, 
+         nawrocki.p2=nawrocki.p, trzaskowski.p2=trzaskowski.p, lgw2=lgw) |>
+  ## kolumna z kodem pocztowym:
+  mutate ( pkod = str_extract(siedziba, "\\b\\d{2}-\\d{3}\\b"))
+
+## Tylko Sopot
+sopot_r2 <- p25_r2 |>  filter (teryt == '226401')
+
+me <- median(sopot_r2$nawrocki.p2)
+mad <- mad(sopot_r2$nawrocki.p2)
+
+sopot_r2_00 <- sopot_r2 |>
+  mutate (me = median(nawrocki.p2),
+          mad = mad(nawrocki.p2),
+          k = (nawrocki.p2 - me) /mad
+          ) |>
+  #filter (k > 2) |>
+  arrange (-k) |>
+  select(siedziba, lgw2, `gangus&sutener`=nawrocki.p2, me, mad, k)
+
+```
+
+After applying Kontek’s procedure, we get:
+median = `r round(me, 2)`% support for KN (obviously, the elite votes for the right candidate :-))
+mad = `r round(mad, 2)`%.
+
+For two precincts, $k > 3$ (top two rows in the table), that’s where
+they cheated:
+
+```{r, echo=FALSE}
+kable(sopot_r2_00, booktabs = TRUE, digits = 2)
+```
+
+The columns `lgw2` and `gangus&sutener` contain, respectively,
+the number of valid votes
+and the percentage of support for KN.
+
+## Conclusions?
+
+1. The rural rabble came to Zoppot for treatment and lowered Rafał Trzaskowski support (just kidding).
+(explanation for foreigners: those 2 anomalities are locate in rehabilitation centers,
+   populated for obvious reasons with people not from Sopot)
+   
+2. In 99% of those 1,400 or 5,000 “anomalous” precincts identified by
+   Kontek, the situation is exactly the same as in Sopot.
+

@@ -1,5 +1,5 @@
 ---
-title: "How to lie with Statistics: przypadek dr inżyniera Kontka"
+title: "How to lie with Statistics: wybory w Polsce i analiza dr inż. Kontka"
 author:
 - name: Tomasz Przechlewski
   email: t.plata-przechlewski@psw.kwidzyn.edu.pl
@@ -97,7 +97,7 @@ Więc przykładowa gmina Sopot ma 25 obwodów pocztowych (Kontek grupował po 15
 gorzej dla wykrycia "anomalii, więc mój przykład jest bardziej niż
 OK -- im więcej obwodów tym trudniej wykryć "anomalie"!) 
 
-```{r}
+```{r, echo=FALSE}
 p25_r2 <- read.csv("protokoly_po_obwodach_w_drugiej_turze_utf8.csv",
                    sep = ';', dec='.',
                    colClasses = c('Teryt.Gminy'= 'character' ),
@@ -146,7 +146,7 @@ mad = `r round(mad, 2)`%.
 
 Dla dwóch komisji $k > 3$ (w tabeli dwa górne wiersze), czyli tam oszukali:
 
-```{r}
+```{r, echo=FALSE}
 kable(sopot_r2_00, booktabs = TRUE, digits = 2)
 ```
 Kolumny `lgw2` oraz `gangus&sutener` zawierają odopowiednio liczbę głosów ważnych (w komisjach "oszukanych" wcale nie tak mało) 
@@ -166,6 +166,61 @@ Już powiniście masować dupę i/lub zgłosic się z czynnym żalem do prokurat
 1. Hołota ze wsi się zjechała do Zoppot na kuracje i zaniżyła Rafałowi poparcie (żart).
 
 2. W 99% z tych 1400 lub 5000 "anomalnych" komisji dr. inżyniera jest tak samo, jak w Sopocie.
+
+## How to lie...
+
+To tytuł książki Darrella Huffa z 1954 roku (wtedy nie było kompterów ani nawet kalkulatorów, 
+co dla niektórych niekoniecznie jest oczywiste). To podobno najbardziej poczytna książka
+nt. statystyki. Książeczka składa się z 10 rozdziałów i jest napisana w prowokacyjny
+sposób (nienaukowy). Nie była przetłumaczona na język polski.
+Poszczególne rozdziały można powiedzieć przeszły
+do legendy i jak się wpisze tytuł rozdziału do google to zwykle można znaleźć
+setki tysięcy stron cytujących. 
+Książeczka przedstawia kilkanaście sposobów manipulacji, w miarę oczywistych.
+
+![Bill Gates poleca: Książka Huffa pierwsza od góry na stosie](./summer-books_2015_1200px_v1.jpg)
+
+Po przedstawieniu tych wszystkich sposobów, wątpiącemu czy w ogóle należy się
+przejmować wynikami analiz statystycznych Huff, w rozdziale 10 mówi że jednak warto, 
+ale radzi zwracać szczególną uwagę na następujące pięć aspektów **każdej
+analizy statystycznej**:
+
+1. Who Says So? (Kto to powiedział -- ludzie mają interesy, osoby zainteresowane mogą nie mówić prawdy)
+
+Kątek nie ukrywa, że chce powtórzenia wyborów. Nie jest osobą bezstronną.
+
+2. How Does He Know? (Jak ten ktoś to ustalił to co ustalił -- dane, które statystyk
+analizuje są często wysoce wadliwe)
+
+Czy mierzenie podobnych obszarów za pomocą grupowania 15 obwodów pocztowych
+gwarantuje że ludzie na nich mają podobne rozkłady preferencji
+wyborczych. Jeżeli tak to z czego to niby wynika?
+
+Czy mierzenie anomalii tak jak to zrobił Kontek z czegoś wynika czy jest
+to decyzja w 100% arbitralna (czemu k=3 a nie k=10 na przykład?)
+
+3. What's Missing? (Czego brakuje -- analiza jest niejasna/niepełna)
+
+Jeżeli mierzenie podobnych obszarów za pomocą grupowania 15 obwodów pocztowych
+jest OK, to zróbmy to samo dla wyborów w roku 2020 i w roku 2015 na przykład. 
+I co? Nie ma tam "anomalii"?
+
+4. Did Somebody Change The Subject? (Ktoś zmienił temat? -- czy teza i dowód są logicznie
+powiązane czy tylko sprawiają takie wrażenie)
+
+Kątek udowodnił że że w wynikach wyborczych są obserwacje anomalne ;
+Kątek **nie udowodnił**, że obserwacja anomalna = fałszerstwo. 
+On to tylko sugeruje że obserwacja anomalna = fałszerstwo
+
+  
+5. Does It Make Sense? (ogólnie czy coś z tego wynika na poziomie zdrowego rozsądku)
+
+No właśnie nie wynika, jak się chwilę zastanowimy. 
+Co więcej nie potrzeba być ekspertem od statystyki żeby dojść do tego wniosku
+
+Kontek nie przeszedł wszystkich 5 punktów z listy Huffa, do kibla
+z jego analizą...
+
 
 ## Dane
 
