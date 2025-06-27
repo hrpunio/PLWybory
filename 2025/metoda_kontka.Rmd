@@ -90,7 +90,7 @@ została udowodniona zależność pomiędzy **coś** a **czymś**.
 
 Nie chce mi się odtwarzać grupowania obwodów pocztowych tak jak zrobił to
 Kontek, ale grupowanie nie powinno mieć znaczenia, w tym sensie jakie konkretnie
-obwody tworzą grupę aby tylko przylegały do siebie i było ich circa 15 (inaczej cała
+obwody tworzą grupę, aby tylko przylegały do siebie i było ich circa 15 (inaczej cała
 metoda jest z definicji do kitu).
 
 Więc przykładowa gmina Sopot ma 25 obwodów pocztowych (Kontek grupował po 15 ale, im więcej tym
@@ -144,7 +144,7 @@ Po zastosowaniu procedury Kontka mamy:
 mediana = `r round(me, 2)`% dla KN (wiadomo elita głosuje na tego kogo trzeba:-))
 mad = `r round(mad, 2)`%.
 
-Dla dwóch $komisji k > 3$ (w tabeli dwa górne wiersze), czyli oszukali:
+Dla dwóch komisji $k > 3$ (w tabeli dwa górne wiersze), czyli tam oszukali:
 
 ```{r}
 kable(sopot_r2_00, booktabs = TRUE, digits = 2)
@@ -161,16 +161,14 @@ oraz
 Już powiniście masować dupę i/lub zgłosic się z czynnym żalem do prokuratora
 (żart)
 
-
-Załączam dokładny wydruk na obrazku, na którym
-
 ## Wnioski?
 
 1. Hołota ze wsi się zjechała do Zoppot na kuracje i zaniżyła Rafałowi poparcie (żart).
 
-2. W 99% z tych 1400 lub 5000 "anomalnych" komisji inżyniera jest tak samo jak w Sopocie.
+2. W 99% z tych 1400 lub 5000 "anomalnych" komisji dr. inżyniera jest tak samo, jak w Sopocie.
 
 ## Dane
 
 Dane i program, który obliczył anomalia dla Sopotu 
-można znaleść tutaj
+można znaleść tutaj:
+https://github.com/hrpunio/PLWybory/tree/master/2025
