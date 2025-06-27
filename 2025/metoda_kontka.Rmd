@@ -1,0 +1,176 @@
+---
+title: "How to lie with Statistics: przypadek dr inżyniera Kontka"
+author:
+- name: Tomasz Przechlewski
+  email: t.plata-przechlewski@psw.kwidzyn.edu.pl
+  affiliation: Powiślańska Szkoła Wyższa (Kwidzyn/Poland)
+date: "27/6/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("knitr")
+
+```
+
+
+## Wstęp
+
+Wyjaśnienie zupełnie niezasłużenie głośnej analizy pana dr. inż. Kontka, która miała
+**naukowo** dowodzić masowych fałszerstw popełnionych podczas wyborów
+prezydenckich w Polsce 2025 w roku. Nie wiedzieć czemu, p. Kontek był tak
+przekonywujący, że prokurator generalny p. Bodnar potraktował jego wywody z całkowitą powagą:
+
+*Protesty wyborcze wniesione przez Krzysztofa Kontka oraz Joannę
+Staniszkis zostały przekazane przez Sąd Najwyższy Prokuratorowi
+Generalnemu w dniu 23 czerwca 2025 r. celem zajęcia stanowiska, przy
+jednoczesnym wyznaczeniu dwudniowego terminu na jego przedstawienie,
+tj. do końca dnia 25 czerwca 2025 r., zgodnie z zasadami obliczania
+terminów, określonymi w Kodeksie postępowania cywilnego.*
+
+*Autorzy protestów załączyli materiały świadczące o możliwych
+nieprawidłowościach w procesie liczenia głosów. Ich zarzuty oparto na
+naukowo weryfikowalnej metodzie, co pozwoliło Prokuratorowi
+Generalnemu uznać, że istnieje wysokie prawdopodobieństwo
+rzeczywistych nieprawidłowości w pracach wskazanych komisji
+wyborczych*.
+
+W tym krótkim tekście wyjaśnimy dlaczego p. Bodnar ośmieszył siebie i urzędy, które piastuje.
+
+## Metoda Kontka
+
+Koncepcyjnie metoda jest bardzo prosta:
+
+1.Kontek zakłada, że na małych obszarach preferencje wyborcze są podobne (homegeniczne naukowo), co oznacza,
+że we wszystkich komisjach obwodowych poparcie dla kandydatów powinno być zbliżone.  
+Tych obszarów wyróżnia 2200
+w każdym jest zatem przeciętnie około 15 komisji i 10 tys wyborców którzy głosowali (20 mln/2200)
+
+2. Dla każdego takiego obszaru oblicza medianę oraz zmienność poparcia dla Karola Nawrockiego.
+Zmienność czyli jak bardzo wyniki się różnią pomiędzy komisjami. Do mierzenia zmienności wykorzystuje
+coś co się nazywa **odchylenie bezwzględne medianowe** (*median absolute deviation*, MAD)
+
+3. Oblicza taką oto miarę: 
+
+$$k = \frac{x - me}{mad}$$
+
+gdzie $x$ to poparcie dla KN, $me$ to mediana poparcia, a $mad$ to miara zmienności MAD.
+Wzór wygląda groźnie, ale jeżeli $(x - me)$ to różnica w % pomiędzy poparciem w komisji a medianą dla danej grupy,
+to podzielenie tego przez $mad$ przeskaluje wynik z procentów na krotność mad.
+Czyli różnica przykładowo nie wyniesie 4,34% tylko 2,3 (odchylenie od mediany wynosi 2.3 mad)
+
+4. Przyjmuje **arbitralnie** wartość, którą uznaje za dopuszczalną.
+Wartości o wartości bezwzględnej większej niż 3 uznaje się za anomalie.
+Kontek przyjmuje przyjmuje k=2 lub k=3 jako te wartości ,,dopuszczalne''.
+
+5. Dla około 32,000 komisji obwodowych znalazł w ten sposób 1700 anomalii w wariancie k=3 
+lub 5 tys w wariancie k=2.
+
+## Czemu ta analiza jest wadliwa?
+
+Założenie 1, że na małych obszarach musi być te same poparcie jest
+wzięte z sufitu. On sobie po prostu tak założył, a tak być wcale nie
+musi. Cały jego "model" jest na tym oparty, a **każdy model jest 
+tak wiarygodny jak założenia, na których jest oparty**.
+
+Zwracamy uwagę, że do stwierdzenia, iż cała jego praca to **bezwartościowy śmieć** nie
+trzeba znać statystyki wystarczy zdrowy rozsądek. I z czymś takim właśnie poleciał
+do Sąd Najwyższego min. sprawiedliwości Bodnar, no po prostu wstyd.
+
+2--4 to już jest matematyka bez znaczenia. Jemu wychodzą "anomalia", bo
+muszą wychodzić, ale czy są to oszustwa to już niekoniecznie. Kontek po prostu
+zastosował stary trik udowadnia matematycznie **coś**, udaje że to coś ma
+coś wspólnego z **czymś** innym, a to nie ma z tym nic wspólnego bo nie
+została udowodniona zależność pomiędzy **coś** a **czymś**.
+
+## Przykład
+
+Nie chce mi się odtwarzać grupowania obwodów pocztowych tak jak zrobił to
+Kontek, ale grupowanie nie powinno mieć znaczenia, w tym sensie jakie konkretnie
+obwody tworzą grupę aby tylko przylegały do siebie i było ich circa 15 (inaczej cała
+metoda jest z definicji do kitu).
+
+Więc przykładowa gmina Sopot ma 25 obwodów pocztowych (Kontek grupował po 15 ale, im więcej tym
+gorzej dla wykrycia "anomalii, więc mój przykład jest bardziej niż
+OK -- im więcej obwodów tym trudniej wykryć "anomalie"!) 
+
+```{r}
+p25_r2 <- read.csv("protokoly_po_obwodach_w_drugiej_turze_utf8.csv",
+                   sep = ';', dec='.',
+                   colClasses = c('Teryt.Gminy'= 'character' ),
+                   header=TRUE,
+                   ##skip=1,
+                   na.string="NA" ) |>
+  select( nrk=Nr.komisji,
+          gmina=Gmina, 
+          teryt=Teryt.Gminy, 
+          siedziba=Siedziba, 
+          lgw=Liczba.głosów.ważnych.oddanych.łącznie.na.obu.kandydatów..z.kart.ważnych.,
+          nawrocki=NAWROCKI.Karol.Tadeusz,
+          trzaskowski=TRZASKOWSKI.Rafał.Kazimierz ) |>
+  ## Poprawiamy teryt
+  mutate(teryt = ifelse( nchar(teryt) == 5, sprintf ("0%s", teryt), teryt)) |>
+  mutate ( rr =  nawrocki + trzaskowski,
+           nawrocki.p = nawrocki/rr *100,
+           trzaskowski.p = trzaskowski/rr *100  ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, teryt, siedziba,
+         nawrocki2=nawrocki, trzaskowski2=trzaskowski, 
+         nawrocki.p2=nawrocki.p, trzaskowski.p2=trzaskowski.p, lgw2=lgw) |>
+  ## kolumna z kodem pocztowym:
+  mutate ( pkod = str_extract(siedziba, "\\b\\d{2}-\\d{3}\\b"))
+
+## Tylko Sopot
+sopot_r2 <- p25_r2 |>  filter (teryt == '226401')
+
+me <- median(sopot_r2$nawrocki.p2)
+mad <- mad(sopot_r2$nawrocki.p2)
+
+sopot_r2_00 <- sopot_r2 |>
+  mutate (me = median(nawrocki.p2),
+          mad = mad(nawrocki.p2),
+          k = (nawrocki.p2 - me) /mad
+          ) |>
+  #filter (k > 2) |>
+  arrange (-k) |>
+  select(siedziba, lgw2, `gangus&sutener`=nawrocki.p2, me, mad, k)
+
+```
+
+Po zastosowaniu procedury Kontka mamy:
+mediana = `r round(me, 2)`% dla KN (wiadomo elita głosuje na tego kogo trzeba:-))
+mad = `r round(mad, 2)`%.
+
+Dla dwóch $komisji k > 3$ (w tabeli dwa górne wiersze), czyli oszukali:
+
+```{r}
+kable(sopot_r2_00, booktabs = TRUE, digits = 2)
+```
+Kolumny `lgw2` oraz `gangus&sutener` zawierają odopowiednio liczbę głosów ważnych (w komisjach "oszukanych" wcale nie tak mało) 
+**oraz**
+odsetek poparcia dla KN.
+
+
+Uwaga: państwo członkowie z komisji obwodowych 
+**Sanatorium Uzdrowiskowe "Leśnik", ul. 23 Marca 105**
+oraz
+**SP ZOZ Sanatorium Uzdrowiskowe MSWiA, ul. Bitwy pod Płowcami 63/65**
+Już powiniście masować dupę i/lub zgłosic się z czynnym żalem do prokuratora
+(żart)
+
+
+Załączam dokładny wydruk na obrazku, na którym
+
+## Wnioski?
+
+1. Hołota ze wsi się zjechała do Zoppot na kuracje i zaniżyła Rafałowi poparcie (żart).
+
+2. W 99% z tych 1400 lub 5000 "anomalnych" komisji inżyniera jest tak samo jak w Sopocie.
+
+## Dane
+
+Dane i program, który obliczył anomalia dla Sopotu 
+można znaleść tutaj

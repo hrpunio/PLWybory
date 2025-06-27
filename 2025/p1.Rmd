@@ -1,0 +1,327 @@
+---
+title: "Wybory 2025"
+author: "Tomasz Przechlewski"
+description: (c) Tomasz Przechlewski / CC-BY license 
+date: "2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library("tidyverse")
+library("ggpubr")
+setwd("~/Projekty/PKW/2025")
+
+spanV <- 0.5
+min_lgw <- 49
+
+## PKW spierniczyła Teryt w 2023/2024 roku ############################
+```
+
+## Dane
+
+Pobrane ze strony PKW
+
+```{r, echo=FALSE}
+p25 <- read.csv("protokoly_po_obwodach_utf8.csv",
+		 sep = ';', dec='.',
+     header=TRUE,
+		 ##skip=1,
+		 na.string="NA" ) |>
+select( "nrk"="Nr.komisji",
+`gmina`=`Gmina`, 
+`teryt`=`Teryt.Gminy`, 
+`powiat`=`Powiat`, 
+`powiat.teryt`=`Teryt.Powiatu`, 
+`woj`=`Województwo`, 
+`siedziba`=`Siedziba`, 
+`lkart.otrzymanych`=`Liczba.kart.do.głosowania.otrzymanych.przez.obwodową.komisję.wyborczą..ustalona.po.ich.przeliczeniu.przed.rozpoczęciem.głosowania.z.uwzględnieniem.ewentualnych.kart.otrzymanych.z.rezerwy`,
+`l.wyborcow.upr`=`Liczba.wyborców.uprawnionych.do.głosowania..umieszczonych.w.spisie..z.uwzględnieniem.dodatkowych.formularzy..w.chwili.zakończenia.głosowania`,
+`l.kart.niewyk`=`Liczba.niewykorzystanych.kart.do.głosowania`,
+lwkwk=`Liczba.wyborców..którym.wydano.karty.do.głosowania.w.lokalu.wyborczym..liczba.podpisów.w.spisie.oraz.adnotacje.o.wydaniu.karty.bez.potwierdzenia.podpisem.w.spisie.`,
+`l.pakiety`=`Liczba.wyborców..którym.wysłano.pakiety.wyborcze`,
+`l.x1`=`Liczba.wyborców..którym.wydano.karty.do.głosowania.w.lokalu.wyborczym.oraz.w.głosowaniu.korespondencyjnym..łącznie.`,
+`l.x2`=`Liczba.wyborców.głosujących.przez.pełnomocnika..liczba.kart.do.głosowania.wydanych.na.podstawie.aktów.pełnomocnictwa.otrzymanych.przez.obwodową.komisję.wyborczą.`,
+`l.x3`=`Liczba.wyborców.głosujących.na.podstawie.zaświadczenia.o.prawie.do.głosowania`,
+`l.x4`=`Liczba.otrzymanych.kopert.zwrotnych.w.głosowaniu.korespondencyjnym`,
+`l.x5`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.nie.było.oświadczenia.o.osobistym.i.tajnym.oddaniu.głosu`,
+`l.x6`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.oświadczenie.nie.było.podpisane.przez.wyborcę`,
+`l.x7`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.nie.było.koperty.na.kartę.do.głosowania`,
+`l.kopert.x`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.znajdowała.się.niezaklejona.koperta.na.kartę.do.głosowania`,
+`l.kopert`=`Liczba.kopert.na.kartę.do.głosowania.w.głosowaniu.korespondencyjnym.wrzuconych.do.urny`,
+`lk`=`Liczba.kart.wyjętych.z.urny`,
+`lk.gk`=`w.tym.liczba.kart.wyjętych.z.kopert.na.kartę.do.głosowania.w.głosowaniu.korespondencyjnym`,
+`lknw`=`Liczba.kart.nieważnych..bez.pieczęci.obwodowej.komisji.wyborczej.lub.inne.niż.urzędowo.ustalone.`,
+`lkw`=`Liczba.kart.ważnych`,
+`lgnw`=`Liczba.głosów.nieważnych..z.kart.ważnych.`,
+`lgnw.x`=`w.tym.z.powodu.postawienia.znaku..X..obok.nazwiska.dwóch.lub.większej.liczby.kandydatów`,
+`lgnw.no.x`=`w.tym.z.powodu.niepostawienia.znaku..X..obok.nazwiska.żadnego.kandydata`,
+`lgnw.no.z`=`w.tym.z.powodu.postawienia.znaku..X..wyłącznie.obok.nazwiska.skreślonego.kandydata`,
+`lgw`=`Liczba.głosów.ważnych.oddanych.łącznie.na.wszystkich.kandydatów..z.kart.ważnych.`,
+`bartoszewicz`=`BARTOSZEWICZ.Artur`,
+`biejat`=`BIEJAT.Magdalena.Agnieszka`,
+`braun`=`BRAUN.Grzegorz.Michał`,
+`holownia`=`HOŁOWNIA.Szymon.Franciszek`,
+`jakubiak`=`JAKUBIAK.Marek`,
+`maciak`=`MACIAK.Maciej`,
+`mentzen`=`MENTZEN.Sławomir.Jerzy`,
+`nawrocki`=`NAWROCKI.Karol.Tadeusz`,
+`senyszyn`=`SENYSZYN.Joanna`,
+`stanowski`=`STANOWSKI.Krzysztof.Jakub`,
+`trzaskowski`=`TRZASKOWSKI.Rafał.Kazimierz`,
+`woch`=`WOCH.Marek.Marian`,
+`zandberg`=`ZANDBERG.Adrian.Tadeusz` ) |>
+  mutate ( rr0 = nawrocki + trzaskowski,
+           rr = bartoszewicz + biejat + braun + holownia + jakubiak + maciak + mentzen + nawrocki +
+             senyszyn + stanowski + trzaskowski + woch + zandberg,
+           bb = lgw - rr,
+           ##
+           nawrocki.p = nawrocki/rr *100,
+           trzaskowski.p = trzaskowski/rr *100,
+           ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, gmina, teryt, siedziba, nawrocki, trzaskowski, nawrocki.p, trzaskowski.p, lgw)
+
+####
+## p25.0
+####
+
+p25_r2 <- read.csv("protokoly_po_obwodach_w_drugiej_turze_utf8.csv",
+                sep = ';', dec='.',
+                header=TRUE,
+                ##skip=1,
+                na.string="NA" ) |>
+  select( "nrk"="Nr.komisji",
+          `gmina`=`Gmina`, 
+          `teryt`=`Teryt.Gminy`, 
+          `powiat`=`Powiat`, 
+          `powiat.teryt`=`Teryt.Powiatu`, 
+          `woj`=`Województwo`, 
+          `siedziba`=`Siedziba`, 
+          `lkart.otrzymanych`=`Liczba.kart.do.głosowania.otrzymanych.przez.obwodową.komisję.wyborczą..ustalona.po.ich.przeliczeniu.przed.rozpoczęciem.głosowania.z.uwzględnieniem.ewentualnych.kart.otrzymanych.z.rezerwy`,
+          `l.wyborcow.upr`=`Liczba.wyborców.uprawnionych.do.głosowania..umieszczonych.w.spisie..z.uwzględnieniem.dodatkowych.formularzy..w.chwili.zakończenia.głosowania`,
+          `l.kart.niewyk`=`Liczba.niewykorzystanych.kart.do.głosowania`,
+          lwkwk=`Liczba.wyborców..którym.wydano.karty.do.głosowania.w.lokalu.wyborczym..liczba.podpisów.w.spisie.oraz.adnotacje.o.wydaniu.karty.bez.potwierdzenia.podpisem.w.spisie.`,
+          `l.pakiety`=`Liczba.wyborców..którym.wysłano.pakiety.wyborcze`,
+          `l.x1`=`Liczba.wyborców..którym.wydano.karty.do.głosowania.w.lokalu.wyborczym.oraz.w.głosowaniu.korespondencyjnym..łącznie.`,
+          `l.x2`=`Liczba.wyborców.głosujących.przez.pełnomocnika..liczba.kart.do.głosowania.wydanych.na.podstawie.aktów.pełnomocnictwa.otrzymanych.przez.obwodową.komisję.wyborczą.`,
+          `l.x3`=`Liczba.wyborców.głosujących.na.podstawie.zaświadczenia.o.prawie.do.głosowania`,
+          `l.x4`=`Liczba.otrzymanych.kopert.zwrotnych.w.głosowaniu.korespondencyjnym`,
+          `l.x5`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.nie.było.oświadczenia.o.osobistym.i.tajnym.oddaniu.głosu`,
+          `l.x6`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.oświadczenie.nie.było.podpisane.przez.wyborcę`,
+          `l.x7`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.nie.było.koperty.na.kartę.do.głosowania`,
+          `l.kopert.x`=`Liczba.kopert.zwrotnych.w.głosowaniu.korespondencyjnym..w.których.znajdowała.się.niezaklejona.koperta.na.kartę.do.głosowania`,
+          `l.kopert`=`Liczba.kopert.na.kartę.do.głosowania.w.głosowaniu.korespondencyjnym.wrzuconych.do.urny`,
+          `lk`=`Liczba.kart.wyjętych.z.urny`,
+          `lk.gk`=`w.tym.liczba.kart.wyjętych.z.kopert.na.kartę.do.głosowania.w.głosowaniu.korespondencyjnym`,
+          `lknw`=`Liczba.kart.nieważnych..bez.pieczęci.obwodowej.komisji.wyborczej.lub.inne.niż.urzędowo.ustalone.`,
+          `lkw`=`Liczba.kart.ważnych`,
+          `lgnw`=`Liczba.głosów.nieważnych..z.kart.ważnych.`,
+          ##
+          `lgnw.x`=`w.tym.z.powodu.postawienia.znaku..X..obok.nazwisk.obu.kandydatów`,
+          `lgnw.no.x`=`w.tym.z.powodu.niepostawienia.znaku..X..obok.nazwiska.żadnego.kandydata`,
+          ##
+          ##`lgnw.no.z`=`w.tym.z.powodu.postawienia.znaku..X..wyłącznie.obok.nazwiska.skreślonego.kandydata`,
+          `lgw`=`Liczba.głosów.ważnych.oddanych.łącznie.na.obu.kandydatów..z.kart.ważnych.`,
+          ##
+          `nawrocki`=`NAWROCKI.Karol.Tadeusz`,
+          `trzaskowski`=`TRZASKOWSKI.Rafał.Kazimierz` ) |>
+  mutate ( rr =  nawrocki + trzaskowski,
+           bb = lgw - rr,
+           nawrocki.p = nawrocki/rr *100,
+           trzaskowski.p = trzaskowski/rr *100,
+  ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, nawrocki2=nawrocki, trzaskowski2=trzaskowski, nawrocki.p2=nawrocki.p, 
+          trzaskowski.p2=trzaskowski.p, lgw2=lgw)
+
+komisje.1tura <- nrow(p25)
+komisje.2tura <- nrow(p25_r2)
+
+## lgw as reported by PKW
+lgw.true <- 20844163
+
+## 20844163
+## drobna różnica
+lgw2.sum <- sum(p25_r2$lgw2, na.rm=T)
+t_lgw2.sum <- sum(p25_r2$trzaskowski2, na.rm=T)
+n_lgw2.sum <- sum(p25_r2$nawrocki2, na.rm=T)
+
+```
+
+Było `r komisje.1tura` komisji w pierwszej turze
+oraz `r komisje.2tura` komisji w drugiej turze.
+Oddano `r lgw2.sum` głosów ważnych ogółem, w tym
+`r t_lgw2.sum` na Rafała Trzaskowskiego oraz
+`r n_lgw2.sum` na Karola Nawrockiego. PKW raportuje `r lgw.true`
+ważnych głosów. Nie wnikałem z czego wynika różnica (oprócz tego że z trzech obwodów
+zagranicznych nie ma danych), ale nie ma praktycznego znaczenia.
+
+## Pominięte komisje
+
+```{r}
+## 32143 komisje
+## 31518 komisji gdzie lgw > 24 w obu turach
+p <- left_join(p25, p25_r2, by='nrk') |>
+  filter (lgw > min_lgw & lgw2 > min_lgw ) |>
+  mutate (nawrocki.z = nawrocki2/nawrocki * 100 - 100,
+          trzaskowski.z = trzaskowski2/trzaskowski * 100 - 100)
+
+rows.big <- nrow(p)
+## 31518 komisji gdzie lgw < 49 w obu turach
+p.rest <- left_join(p25, p25_r2, by='nrk') |>
+  filter (lgw <= min_lgw | lgw2 <= min_lgw ) |>
+  summarise( n = sum(nawrocki2, na.rm=T), 
+                     t = sum(trzaskowski2, na=T))
+## W tych okręgach:
+## 56068 N
+## 40958 T
+## % głosów na N jako % wszystkich głosów ważnych
+n.omitted.sum <- sum(p.rest$n, na.rm=T)
+t.omitted.sum <- sum(p.rest$t, na.rm=T)
+## p.rest$n/lgw2.sum * 100
+## 15,1% różnicy głosów pomiędzy N a T
+##
+##
+```
+
+Pomijamy komisje w których oddano `r min_lgw` głosów w pierwszej albo drugiej
+turze. Pozostaje `r rows.big` komisji. W pominętych komisjach
+oddano `r t.omitted.sum` głosów na Rafała Trzaskowskiego oraz
+`r n.omitted.sum` głosów na Karola Nawrockiego. Pominięte głosy na KN
+stanowią `r n.omitted.sum/lgw2.sum * 100`% wszystkich głosów ważnych
+(KN wygrał z RT przewagą około 1,77% głosów ważnych; pominięte głosy
+to zatem około `r (n.omitted.sum/lgw2.sum)/0.0177 * 100`% tej przewagi.)
+
+## Wykresy
+
+Przyrosty względne tj. $(g_2 - g_1)/g_1 * 100%$. O ile procent 
+wzrosła liczba głosów oddanych na kandydata w drugiej turze w porówaniu do
+pierwszej
+
+```{r, echo=FALSE}
+p0 <- p |> select (nrk, nawrocki.z, trzaskowski.z) |>
+  pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  ggplot(aes(x=name, y=value)) +
+  geom_jitter(alpha=.3, size=.1, color='navyblue') +
+  ylab('%') +
+  xlab('') +
+  ##geom_boxplot(color='red', outliers = FALSE) +
+  ggtitle('% zmiana poparcia dla kandydatów wg obwodowych komisji wyborczych',
+          subtitle='Pominięto komisje, w których oddano 49 głosy lub mniej')
+p0
+
+t.zero.1 <- p |> filter (trzaskowski == 0)
+t.zero.1.sum <- nrow(t.zero.1)
+trzaskowski.0.t2 <- sum(t.zero.1$trzaskowski2, na.rm = TRUE)
+nawrocki.0.t1 <- sum(t.zero.1$nawrocki, na.rm = TRUE)
+nawrocki.0.t2 <- sum(t.zero.1$nawrocki2, na.rm = TRUE)
+```
+
+W `r t.zero.1.sum` obwodach RT uzyskła w pierwszej turze 0 głosów
+(w tych komisjach RT uzyskał łącznie `r trzaskowski.0.t2` głosów w drugiej turze, 
+zaś KN uzyskał łącznie `r nawrocki.0.t1` w pierwszej oraz
+`r nawrocki.0.t2` w drugiej turze). W tych obwodach oczywiście wartość przyrostu względnego
+ma wartość *nieskończoność* ale dotyczy śladowej ilości głosów. 
+
+
+```{r, echo=FALSE, warning=FALSE}
+p0p <- p |> select (nrk, nawrocki.z, trzaskowski.z) |>
+  pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  filter (value < 1000) |>
+  ggplot(aes(x=name, y=value)) +
+  geom_jitter(alpha=.3, size=.1, color='navyblue') +
+  ylab('%') +
+  xlab('') +
+  ##geom_boxplot(color='red', outliers = FALSE) +
+  ggtitle('% zmiana poparcia dla kandydatów wg obwodowych komisji wyborczych',
+          subtitle='Pominięto komisje, w których oddano 49 głosy lub mniej')
+p0p
+```
+
+Z tego wykresu lepiej widać, że tylko w nielicznych obwodach odnotowano wynik
+mniejszy od zera i większy od 250%. 
+
+```{r, echo=FALSE, warning=FALSE}
+max_increase <- 250
+min_increase <- 10
+
+p_h <- p |> filter (nawrocki.z > max_increase | trzaskowski.z > max_increase ) |>
+  filter (lgw > min_lgw & lgw2 > min_lgw ) |>
+  select (nrk, teryt, siedziba, nawrocki, nawrocki2, nawrocki.z, trzaskowski, trzaskowski2, trzaskowski.z)
+p_l <- p |> filter (nawrocki.z < min_increase | trzaskowski.z < min_increase  ) |>
+  filter (lgw > min_lgw & lgw2 > min_lgw ) |>
+  select (nrk, teryt, siedziba, nawrocki, nawrocki2, nawrocki.z, trzaskowski, trzaskowski2, trzaskowski.z)
+
+p_h_l <- bind_rows(p_h, p_l)
+
+p_h_l.rows <- nrow(p_h_l)
+p_h_l.nawrocki <- sum(p_h_l$nawrocki2)
+p_h_l.trzaskowski <- sum(p_h_l$trzaskowski2)
+
+q <- p |> select (nrk, nawrocki.z, trzaskowski.z, lgw2, nawrocki2, trzaskowski2) |>
+  filter (nawrocki.z <= max_increase  & trzaskowski.z <= max_increase ) 
+
+qq.rows <- nrow(q)
+qq.sum.lgw2 <- sum(q$lgw2)
+t2_lgw <- sum(q$trzaskowski2)
+n2_lgw <- sum(q$nawrocki2)
+##
+qq1 <- t_lgw2.sum - t2_lgw
+qq2 <- n_lgw2.sum - n2_lgw
+```
+
+Na kolejnym wykresie zatem pominiemy 
+także te komisje, których jest `r p_h_l.rows`. KN zdobył
+w nich `r p_h_l.nawrocki` a RT `r p_h_l.trzaskowski` głosów. 
+Zajmiemy się tymi `r p_h_l.rows` komisjami później.
+
+
+```{r, echo=FALSE, warning=FALSE}
+p2 <- q |> pivot_longer(cols = c(nawrocki.z, trzaskowski.z)) |>
+  ggplot(aes(x=value, fill=name )) +
+  geom_histogram(binwidth = 2.5, alpha=.3) +
+  ylab('liczba komisji') +
+  xlab('% poparcia (zmiana)') +
+  scale_x_continuous(limits = c(-50, 225), breaks = seq(-50, 225, by = 20)
+                     ) +
+  scale_y_continuous(limits = c(0, 2750), breaks = seq(0, 2750, by = 250)
+  ) +
+  ##geom_boxplot(color='red', outliers = FALSE) +
+  ggtitle('% zmiana poparcia dla kandydata',
+          subtitle='Pominięto komisje, w których oddano 49 głosy lub mniej')
+p2
+
+
+very_high <- p_h_l |> #select (nrk, nawrocki.z, trzaskowski.z) |>
+  pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  filter (value > 1000)
+
+
+p1 <- p_h_l |> select (nrk, nawrocki.z, trzaskowski.z) |>
+  #pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  filter (nawrocki.z <= 1000 & trzaskowski.z <= 1000) |>
+  ggplot(aes(x=nawrocki.z, y=trzaskowski.z)) +
+  geom_point(alpha=.3, size=.4, color='navyblue') +
+  ##ylab('%') +
+  ##xlab('') +
+  ##geom_boxplot(color='red', outliers = FALSE) +
+  ggtitle('% zmiana poparcia dla kandydata',
+          subtitle='Pominięto komisje, w których oddano 99 głosy lub mniej')
+p1
+
+nawrocki.h <- p_h_l |> #select (nrk, nawrocki.z, trzaskowski.z) |>
+  #pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  filter (nawrocki.z >= 250 & nawrocki.z <= 500 & trzaskowski.z < 250 & trzaskowski.z > 0)
+
+sum.nawrocki <- sum(nawrocki.h$nawrocki2)
+
+trzaskowski.h <- p_h_l |> #select (nrk, nawrocki.z, trzaskowski.z) |>
+  #pivot_longer(cols=c(nawrocki.z, trzaskowski.z)) |>
+  filter (trzaskowski.z >= 250 & trzaskowski.z <= 500 & nawrocki.z < 250 & nawrocki.z > 0)
+
+sum.trzaskowski <- sum(trzaskowski.h$trzaskowski2)
+
+##trzaskowski.h 
+```
