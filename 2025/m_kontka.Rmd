@@ -1,0 +1,404 @@
+---
+title: "Zastosowanie `dezinformacji Kontka' do wyników wyborów w 2020, 2023 oraz 2025 roku"
+author:
+- name: Tomasz Przechlewski
+  email: "t.plata-przechlewski@psw.kwidzyn.edu.pl"
+  affiliation: Powiślańska Szkoła Wyższa (Kwidzyn/Poland)
+date: "29/6/2025"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("knitr")
+
+```
+## Wstęp
+
+Dezinformacja Kontka opiera się na założeniu, że na małych obszarach preferencje wyborcze są podobne. Kontek w tym celu wyróżnia w Polsce 2200 obszarów. 
+My nie odtwarzamy dokładnie podziału Kontka, bo szkoda nam czasu na grzebanie się w gównie.
+Odtwarzamy tylko część obszarów (tę którą najłatwiej zdefiniować). Dla naszych celów to wystarczy: nie musimy
+testować całości, wystarczy część, aby tylko były to obszary wielkością identyczne z tymi którymi posługiwał 
+się Kontek (a tak jest).
+Jeżeli w naszym podzbiorze zaobserwujemy `anomalie', to i w całym zbiorze one wystąpią, tylko będzie ich więcej.
+
+
+## Wybory prezydenckie 2025
+
+Szukamy **anomalii** w poparciu dla Karola Nawrockiego, mierzonego jako odsetek
+głosów ważnych.
+
+Plik `protokoly_po_obwodach_w_drugiej_turze_utf8.csv` pobrano ze strony PKW
+(https://wybory.gov.pl/prezydent2025/data/csv/protokoly_po_obwodach_w_drugiej_turze_csv.1748833993.zip,
+pobrany 2 czerwca 2025; teraz tam jest inny plik ale mniemamy, że to prawie to samo co nasz po
+poprawnieniu zauważonych nielicznych błędów.)
+
+
+```{r}
+p25_r2 <- read.csv("protokoly_po_obwodach_w_drugiej_turze_utf8.csv",
+                   sep = ';', dec='.',
+                   colClasses = c('Teryt.Gminy'= 'character' ),
+                   header=TRUE,
+                   na.string="NA" ) |>
+  select( nrk=Nr.komisji,
+          gmina=Gmina, 
+          teryt=Teryt.Gminy, 
+          siedziba=Siedziba, 
+          lgw=Liczba.głosów.ważnych.oddanych.łącznie.na.obu.kandydatów..z.kart.ważnych.,
+          nawrocki=NAWROCKI.Karol.Tadeusz,
+          trzaskowski=TRZASKOWSKI.Rafał.Kazimierz ) |>
+  ## Poprawiamy teryt bo PKW spierniczyła:
+  mutate(teryt = ifelse( nchar(teryt) == 5, sprintf ("0%s", teryt), teryt)) |>
+  ## Liczymy udziały
+  mutate ( rr =  nawrocki + trzaskowski,
+           nawrocki.p = nawrocki/rr *100,
+           trzaskowski.p = trzaskowski/rr *100  ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, teryt, siedziba,
+         nawrocki2=nawrocki, trzaskowski2=trzaskowski, 
+         nawrocki.p2=nawrocki.p, trzaskowski.p2=trzaskowski.p, lgw2=lgw) |>
+  ## wyciągamy z kolumny siedziba kod pocztowy:
+  mutate ( pkod = str_extract(siedziba, "\\b\\d{2}-\\d{3}\\b")) |>
+  mutate (pkod3 = substr(pkod, 1,4)) |>
+  mutate (pkod4 = substr(pkod, 1,5)) |>
+  mutate (pkod5 = substr(pkod, 1,6))
+lko_25 <- nrow(p25_r2)
+
+## pkod3 zawierający od 10--16 komisji
+tmp3 <- p25_r2 |> group_by(pkod3) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp3_kody <- tmp3 |> select(pkod3) |> unlist()
+
+## pkod4 zawierający od 10--16 komisji
+tmp4 <- p25_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  group_by(pkod4) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp4_kody <- tmp4 |> select(pkod4) |> unlist()
+
+## pkod5 zawierający od 10--16 komisji
+tmp5 <- p25_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  group_by(pkod5) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp5_kody <- tmp5 |> select(pkod5) |> unlist()
+
+## pkod6 zawierający od 10--16 komisji
+tmp6 <- p25_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  filter (! pkod5 %in% tmp5_kody ) |>
+  group_by(pkod) |>
+  summarise (n=n()) |> 
+  filter (n >= 10 & n <= 16)
+
+## Wybieramy odpowiednie wiersze z p25_r2
+gr3 <- p25_r2 |> filter (pkod3 %in% tmp3_kody) |> mutate (gkod = pkod3)
+gr4 <- p25_r2 |> filter (pkod4 %in% tmp4_kody) |> mutate (gkod = pkod4)
+gr5 <- p25_r2 |> filter (pkod5 %in% tmp5_kody) |> mutate (gkod = pkod5)
+
+## Łączymy do kupy:
+gr0 <- bind_rows(list(gr3, gr4, gr5))
+
+## ile gr0 ma grup:
+ile_grup <- gr0 |> group_by(gkod) |> summarise(n0=n())
+## ile gr0 ma grup:
+ile_group_25 <- nrow(ile_grup)
+ile_komisji_25 <- sum(ile_grup$n0)
+## Ostateczna lista komisji obwodowych z wybranych grup
+gr25x <- gr0 |>
+  group_by(gkod) |>
+  mutate (me = median(nawrocki.p2),
+          mad = mad(nawrocki.p2),
+          k = (nawrocki.p2 - me) /mad
+  ) |>
+  ungroup() |>
+  arrange (-k) |>
+  filter (k > 3) |>
+  select(teryt, siedziba, lgw2, `gangus&sutener`=nawrocki.p2, me, mad, k)
+
+## W ilu komisjach oszukali
+a_25 <- nrow(gr25x)
+## Ile to głosów łącznie 2025:
+a_glosy_25 <- sum(gr25x$lgw2)
+```
+
+## Wybory prezydenckie 2020 
+
+Szukamy `anomalii` w poparciu dla Andrzeja Dudy, mierzonego jako odsetek
+głosów ważnych.
+
+Plik `wyniki_gl_na_kand_po_obwodach_utf8_r2.csv` pobrano ze strony PKW
+(https://prezydent20200628.pkw.gov.pl/prezydent20200628/data/2/csv/wyniki_gl_na_kand_po_obwodach_csv.zip)
+
+```{r}
+p20_r2 <- read.csv("../2020/wyniki_gl_na_kand_po_obwodach_utf8_r2.csv",
+                   sep = ';', dec='.',
+                   colClasses = c('Kod.TERYT'= 'character' ),
+                   header=TRUE,
+                   na.string="NA" ) |>
+  select( nrk=Nr.OKW,
+          gmina=Gmina, 
+          teryt=Kod.TERYT, 
+          siedziba=Siedziba, 
+          lgw=Liczba.głosów.ważnych.oddanych.łącznie.na.wszystkich.kandydatów,
+          duda=Andrzej.Sebastian.DUDA,
+          trzaskowski=Rafał.Kazimierz.TRZASKOWSKI) |>
+  filter(!is.na(nrk)) |>
+  mutate (duda = as.numeric(duda),
+          trzaskowski=as.numeric(trzaskowski),
+          lgw=as.numeric(lgw)) |>
+  filter(!is.na(lgw)) |>
+  ## Poprawiamy teryt:
+  mutate(teryt = ifelse( nchar(teryt) == 5, sprintf ("0%s", teryt), teryt)) |>
+  mutate ( rr =  duda + trzaskowski,
+           duda.p = duda/rr *100,
+           trzaskowski.p = trzaskowski/rr *100  ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, teryt, siedziba,
+         duda2=duda, trzaskowski2=trzaskowski, 
+         duda.p2=duda.p, trzaskowski.p2=trzaskowski.p, lgw2=lgw) |>
+  ## 
+  mutate ( pkod = str_extract(siedziba, "\\b\\d{2}-\\d{3}\\b")) |>
+  mutate (pkod3 = substr(pkod, 1,4)) |>
+  mutate (pkod4 = substr(pkod, 1,5)) |>
+  mutate (pkod5 = substr(pkod, 1,6))
+lko_20 <- nrow(p20_r2)
+
+## To samo co dla p25_r2 (bo PKW zmieniła komisje obwodowe)
+tmp3 <- p20_r2 |> group_by(pkod3) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp3_kody <- tmp3 |> select(pkod3) |> unlist()
+
+tmp4 <- p20_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  group_by(pkod4) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp4_kody <- tmp4 |> select(pkod4) |> unlist()
+
+tmp5 <- p20_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  group_by(pkod5) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp5_kody <- tmp5 |> select(pkod5) |> unlist()
+
+tmp6 <- p20_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  filter (! pkod5 %in% tmp5_kody ) |>
+  group_by(pkod) |>
+  summarise (n=n()) |> 
+  filter (n >= 10 & n <= 16)
+
+gr3 <- p20_r2 |> filter (pkod3 %in% tmp3_kody) |> mutate (gkod = pkod3)
+gr4 <- p20_r2 |> filter (pkod4 %in% tmp4_kody) |> mutate (gkod = pkod4)
+gr5 <- p20_r2 |> filter (pkod5 %in% tmp5_kody) |> mutate (gkod = pkod5)
+
+gr0 <- bind_rows(list(gr3, gr4, gr5))
+
+## ile gr0 ma grup:
+ile_grup <- gr0 |> group_by(gkod) |> summarise(n0=n())
+## ile gr0 ma grup:
+ile_grup_20 <- nrow(ile_grup)
+ile_komisji_20 <- sum(ile_grup$n0)
+
+## Ostateczna lista komisji obwodowych z wybranych grup
+gr20x <- gr0 |>
+  group_by(gkod) |>
+  mutate (me = median(duda.p2),
+          mad = mad(duda.p2),
+          k = (duda.p2 - me) /mad
+  ) |>
+  ungroup() |>
+  #filter (k > 2) |>
+  arrange (-k) |>
+  filter (k > 3) |>
+  select(teryt, siedziba, lgw2, `duda`=duda.p2, me, mad, k)
+
+## W ilu komisjach oszukali
+a_20 <- nrow(gr20x)
+## Ile to głosów łącznie 2020:
+a_glosy_20 <- sum(gr20x$lgw2)
+```
+
+
+## Wybory parlamentarne 2023
+
+Tym razem szukamy `anomalii` w poparciu dla Koalicji Obywatelskiej (a co!), także
+mierzonej jako odsetek głosów ważnych.
+
+Ze strony PKW pobrano
+`https://sejmsenat2023.pkw.gov.pl/sejmsenat2023/data/csv/wyniki_gl_na_kandydatow_po_obwodach_sejm_csv.zip`
+(Wyniki głosowania na kandydatów po obwodach) zawierający liczbę głosów oddanych na każdego
+kandydata w każdej obwodowej komisji wyborczej. 
+Plik ten przekształcono w ten sposób, że dla
+każdej komisji obliczono liczbę głosów oddanych na pięć największych komitetów wyborczych.
+Wynik tej agregacji jest w pliku  `w2023_main_parties_by_precints.csv`, przy czym KO to wynik
+komitetu Koalicja Obywatelska a `PiS` to oczywiście wynik KW Prawo i Sprawiedliwość.
+(Oprócz tego plik zawiera dane dla `3D`=KKW TRZECIA DROGA, `Lewica`=KW NOWA LEWICA oraz `KNF=`KW KONFEDERACJA)
+
+
+```{r}
+p23_r2 <- read.csv("../2023/w2023_main_parties_by_precints.csv",
+                   sep = ';', dec='.',
+                   colClasses = c('teryt'= 'character' ),
+                   header=TRUE,
+                   na.string="NA" ) |>
+  select( nrk,
+          gmina,
+          teryt,
+          siedziba,
+          lgw,
+          KO,
+          PiS) |>
+  filter(!is.na(nrk)) |>
+  #filter(grepl("^\\d+$", lgw))
+  mutate (KO = as.numeric(KO),
+          PiS=as.numeric(PiS),
+          lgw=as.numeric(lgw)) |>
+  filter(!is.na(lgw)) |>
+  ## Poprawiamy teryt
+  mutate(teryt = ifelse( nchar(teryt) == 5, sprintf ("0%s", teryt), teryt)) |>
+  ## % poparcie dla KO:
+  mutate ( KO.p = KO/lgw *100 ) |>
+  mutate ( nrk = sprintf("%s.%03i", teryt, nrk)) |>
+  select(nrk, teryt, siedziba, KO, KO.p, lgw) |>
+  ## kolumna z kodem pocztowym:
+  mutate ( pkod = str_extract(siedziba, "\\b\\d{2}-\\d{3}\\b")) |>
+  mutate (pkod3 = substr(pkod, 1,4)) |>
+  mutate (pkod4 = substr(pkod, 1,5)) |>
+  mutate (pkod5 = substr(pkod, 1,6))
+
+## Ile komisji
+lko_23 <- nrow(p23_r2)
+## To samo co dla p25_r2 (bo PKW zmieniła komisje obwodowe)
+
+tmp3 <- p23_r2 |> group_by(pkod3) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp3_kody <- tmp3 |> select(pkod3) |> unlist()
+
+tmp4 <- p23_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  group_by(pkod4) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp4_kody <- tmp4 |> select(pkod4) |> unlist()
+
+tmp5 <- p23_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  group_by(pkod5) |>
+  summarise (n=n()) |> filter (n >= 10 & n <= 16)
+tmp5_kody <- tmp5 |> select(pkod5) |> unlist()
+
+tmp6 <- p23_r2 |> filter (! pkod3 %in% tmp3_kody) |>
+  filter (! pkod4 %in% tmp4_kody ) |>
+  filter (! pkod5 %in% tmp5_kody ) |>
+  group_by(pkod) |>
+  summarise (n=n()) |> 
+  filter (n >= 10 & n <= 16)
+
+gr3 <- p23_r2 |> filter (pkod3 %in% tmp3_kody) |> mutate (gkod = pkod3)
+gr4 <- p23_r2 |> filter (pkod4 %in% tmp4_kody) |> mutate (gkod = pkod4)
+gr5 <- p23_r2 |> filter (pkod5 %in% tmp5_kody) |> mutate (gkod = pkod5)
+
+gr0 <- bind_rows(list(gr3, gr4, gr5))
+
+## ile gr0 ma grup:
+ile_grup <- gr0 |> group_by(gkod) |> summarise(n0=n())
+## ile gr0 ma grup:
+ile_group_23 <- nrow(ile_grup)
+## ile komisji
+ile_komisji_23 <- sum(ile_grup$n0)
+
+## Ostateczna lista komisji obwodowych z wybranych grup
+gr23x <- gr0 |>
+  group_by(gkod) |>
+  mutate (me = median(KO.p),
+          mad = mad(KO.p),
+          k = (KO.p - me) /mad
+  ) |>
+  ungroup() |>
+  arrange (-k) |>
+  filter (k > 3) |>
+  select(teryt, siedziba, lgw, KO=KO.p, me, mad, k)
+
+## W ilu komisjach oszukali?
+a_23 <- nrow(gr23x)
+
+## Ile to głosów łącznie (2023):
+a_glosy_23 <- sum(gr23x$lgw)
+```
+
+## Wybory prezydenckie 2015 
+
+W przygotowaniu...
+
+## Wnioski
+
+W poniższej tabeli
+
+```{r, echo=FALSE}
+glosy_lacznie <- c(a_glosy_25, a_glosy_23, a_glosy_20)
+z_komisje_lacznie <- c(a_25, a_23, a_20)
+komisje_lacznie <- c(lko_25, lko_23, lko_20)
+ile_lacznie <- c(ile_group_25, ile_group_23, ile_grup_20)
+ile_komisji <- c(ile_komisji_25, ile_komisji_23, ile_komisji_20)
+
+out <- data.frame(rok=c(2025, 2023, 2020),
+  komisje=komisje_lacznie, 
+  grupy=ile_lacznie,
+  komisje.w.grupach=ile_komisji,
+                  oszustwa=z_komisje_lacznie, głosy=glosy_lacznie)
+knitr::kable(out)
+```
+
+Gdzie: `rok` -- rok wyborów,
+`komisje` -- łączna liczba komisji obwodowych,
+`grupy` -- liczba grup zawierających 10--16 komisji,
+`komisje.w.grupach` -- łączna liczba komisji w wyróżnionych grupach,
+`oszustwa` -- aka anomalia wg Kontka,
+`glowy` -- łączna liczba oddanych głosów w komisjach oznaczonych jako *oszustwa*.
+
+Jak widać liczba *oszustw* jest najmniejsza w 2025 roku, a największa w 2020.
+W roku 2023 kiedy KO osiągnęła drugi wynik w wyborach co pozwoliło jej utworzyć
+rządzącą koalicję tez było więcej wałków niż w 2025.
+
+**Mówiąc poważnie**: procedura dezinformacyjna, całkowicie arbitralna i wzięta
+z sufitu, wykazuje pewną liczbę komisji obwodowych jako tych
+w których odnotowano nietypowe poparcie. I tyle...
+
+Największe anomalia są w DS-ach i szpitalach, ale chyba jednak nie z powodu
+oszustw...
+
+## Wykazy podejrzanych komisji obwodowych
+
+W zestawieniach kolumna `lgw` -- liczba głosów ważnych, `%` -- odsetek głosów
+(na Nawrockiego, Dudę i KO), `me` -- mediana w grupie, `mad` -- mad w grupie,
+`k` -- miara anomalności (jeżeli k> 3 to wynik jest anomalny)
+
+### 2025
+
+```{r, echo=FALSE}
+knitr::kable(gr25x, col.names = c('teryt', 'siedziba', 'lgw', '%', 'me', 'mad', 'k'))
+```
+
+### 2023
+
+```{r, echo=FALSE}
+knitr::kable(gr23x, col.names = c('teryt', 'siedziba', 'lgw', '%', 'me', 'mad', 'k'))
+```
+
+### 2020
+
+```{r, echo=FALSE}
+knitr::kable(gr20x, col.names = c('teryt', 'siedziba', 'lgw', '%', 'me', 'mad', 'k'))
+```
+
+## Dane
+
+Wszystkie dane oraz ten dokument w formacie `.Rmd` są tutaj: 
+https://github.com/hrpunio/PLWybory/tree/master/2025
+
+Jak ktoś chce samemu przetworzyć `.Rmd` na coś tam, to 
+powinien dopasować położenie plików `.csv` do struktury katalogów
+na swoim komputerze (czyli zmodyfikować argument funkcji `read.csv`).
+
+Koniec.
