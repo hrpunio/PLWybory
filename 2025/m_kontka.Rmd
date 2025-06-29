@@ -24,13 +24,14 @@ My nie odtwarzamy dokładnie podziału Kontka, bo szkoda nam czasu na grzebanie 
 Odtwarzamy tylko część obszarów (tę którą najłatwiej zdefiniować). Dla naszych celów to wystarczy: nie musimy
 testować całości, wystarczy część, aby tylko były to obszary wielkością identyczne z tymi którymi posługiwał 
 się Kontek (a tak jest).
-Jeżeli w naszym podzbiorze zaobserwujemy `anomalie', to i w całym zbiorze one wystąpią, tylko będzie ich więcej.
-
+Jeżeli w naszym podzbiorze zaobserwujemy *anomalie*, to i w całym zbiorze one wystąpią, tylko będzie ich więcej. Testujemy tylko jedną *anomalię*, mianowicie 
+**odsetek głosów ważnych**, 
+wykazując tylko odchylenia *na plus*. Jak ktoś chce na plus/minus
+to łatwo może zmodyfikować procedury.
 
 ## Wybory prezydenckie 2025
 
-Szukamy **anomalii** w poparciu dla Karola Nawrockiego, mierzonego jako odsetek
-głosów ważnych.
+Szukamy **anomalii** w poparciu dla Karola Nawrockiego, mierzonego jako https://github.com/hrpunio/PLWybory/tree/master/2025.
 
 Plik `protokoly_po_obwodach_w_drugiej_turze_utf8.csv` pobrano ze strony PKW
 (https://wybory.gov.pl/prezydent2025/data/csv/protokoly_po_obwodach_w_drugiej_turze_csv.1748833993.zip,
